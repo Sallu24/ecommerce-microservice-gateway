@@ -1,8 +1,8 @@
 package com.microservice_ecommerce.gateway.jwt;
 
-import com.microservice_ecommerce.gateway.auth.clients.UserClient;
-import com.microservice_ecommerce.gateway.auth.external.User;
-import io.jsonwebtoken.ExpiredJwtException;
+import com.microservice_ecommerce.gateway.clients.IdentityClient;
+import com.microservice_ecommerce.gateway.clients.UserClient;
+import com.microservice_ecommerce.gateway.external.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,17 +13,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     @Autowired
-    private JwtUtils jwtUtils;
+    private IdentityClient identityClient;
 
     @Autowired
     private UserClient userClient;
@@ -35,34 +33,40 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
-            String jwt = parseJwt(request);
+            String token = parseBearerToken(request);
 
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                String email = jwtUtils.getUserNameFromJwtToken(jwt);
+            if (token != null) {
+                Boolean isValidated = identityClient.validateToken(token);
+                System.out.println("Salman 3 isValidated " + isValidated);
 
-                User user = userClient.getUserByEmail(email);
+                if (isValidated) {
+                    String email = identityClient.extractToken(token);
+                    System.out.println("Salman 3 email " + email);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                user,
-                                null,
-                                null);
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    if (email != null) {
+                        User user = userClient.getUserByEmail(email);
+                        System.out.println("Salman 3 user " + user);
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(
+                                        user,
+                                        null,
+                                        null);
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
+                }
             }
-        } catch (ExpiredJwtException exception) {
-            request.setAttribute("expired", exception);
-            logger.error("JWT token is expired: {}", exception.getMessage());
-        } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e);
+        } catch (Exception exception) {
+            logger.error("Cannot set user authentication: {}", exception);
         }
 
         filterChain.doFilter(request, response);
 
     }
 
-    private String parseJwt(HttpServletRequest request) {
+    private String parseBearerToken(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
 
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {

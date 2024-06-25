@@ -1,4 +1,4 @@
-package com.microservice_ecommerce.gateway.auth.external;
+package com.microservice_ecommerce.gateway.external;
 
 public class User {
 
