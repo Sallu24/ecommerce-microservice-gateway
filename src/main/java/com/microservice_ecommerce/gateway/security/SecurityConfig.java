@@ -1,5 +1,8 @@
 package com.microservice_ecommerce.gateway.security;
 
+import com.microservice_ecommerce.gateway.jwt.AuthEntryPointJwt;
+import com.microservice_ecommerce.gateway.jwt.AuthTokenFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,6 +17,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
+    @Autowired
+    private AuthEntryPointJwt unauthorizedHandler;
+
+    @Bean
+    public AuthTokenFilter authenticationJwtTokenFilter() {
+        return new AuthTokenFilter();
+    }
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorizeRequests) ->
@@ -21,23 +32,19 @@ public class SecurityConfig {
                         .requestMatchers("/eureka/main/**").permitAll()
                         .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/brands/**").permitAll()
-                        .requestMatchers("/api/categories/**").permitAll()
-                        .requestMatchers("/api/products/**").permitAll()
-                        .requestMatchers("/api/cart/**").permitAll()
-                        .requestMatchers("/api/users/**").permitAll()
+                        .requestMatchers("/eureka/css/**", "/eureka/js/**", "/eureka/images/**", "/eureka/fonts/**", "/favicon.ico").permitAll()  // Allow access to static resources
                         .anyRequest().authenticated());
         http.sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         );
-//        http.exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler));
+        http.exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler));
         http.headers(headers ->
                 headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
         );
         http.csrf(AbstractHttpConfigurer::disable);
-//        http.addFilterBefore(authenticationJwtTokenFilter(),
-//                UsernamePasswordAuthenticationFilter.class
-//        );
+        http.addFilterBefore(authenticationJwtTokenFilter(),
+                UsernamePasswordAuthenticationFilter.class
+        );
 
         return http.build();
     }
