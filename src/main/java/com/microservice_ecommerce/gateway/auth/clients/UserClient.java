@@ -11,16 +11,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(name = "USER")
 public interface UserClient {
 
-    @GetMapping("/api/users/user-exists/{email}")
+    @GetMapping("/api/users/internal/user-exists/{email}")
     Boolean userExistsByEmail(@PathVariable("email") String email);
 
-    @GetMapping("/api/users/user-by-email/{email}")
+    @GetMapping("/api/users/internal/user-by-email/{email}")
     User getUserByEmail(@PathVariable("email") String email);
 
     @GetMapping("/api/users/{id}")
     User getUser(@PathVariable("id") Long id);
 
-    @PostMapping("/api/users")
+    @PostMapping("/api/users/internal")
     User createUser(@RequestBody CustomerRegisterDTO customerRegisterDTO);
 
 }
