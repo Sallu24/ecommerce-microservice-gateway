@@ -36,26 +36,19 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             String token = parseBearerToken(request);
 
             if (token != null) {
-                Boolean isValidated = identityClient.validateToken(token);
-                System.out.println("Salman 3 isValidated " + isValidated);
+                Long userId = identityClient.validateTokenAndGetUserDetails(token);
 
-                if (isValidated) {
-                    String email = identityClient.extractToken(token);
-                    System.out.println("Salman 3 email " + email);
+                if (userId != null) {
+                    User user = userClient.getUserById(userId);
 
-                    if (email != null) {
-                        User user = userClient.getUserByEmail(email);
-                        System.out.println("Salman 3 user " + user);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    user,
+                                    null,
+                                    null);
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                        UsernamePasswordAuthenticationToken authentication =
-                                new UsernamePasswordAuthenticationToken(
-                                        user,
-                                        null,
-                                        null);
-                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                    }
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
         } catch (Exception exception) {
